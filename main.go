@@ -10,6 +10,7 @@ import (
 	"runtime"
 
 	"github.com/bryanwux/V3Ray/common"
+	"github.com/bryanwux/V3Ray/proxy"
 )
 
 var (
@@ -63,5 +64,13 @@ func main() {
 		log.Printf("can not load config file: %v", err)
 		os.Exit(-1)
 	}
+
+	// initialize local server with config
+	localServer, err := proxy.ServerFromURL(conf.Local)
+	if err != nil {
+		log.Printf("can not create local server: %v", err)
+		os.Exit(-1)
+	}
+	defer localServer.Stop()
 
 }
