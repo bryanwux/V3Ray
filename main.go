@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/bryanwux/V3Ray/common"
 	"github.com/bryanwux/V3Ray/proxy"
@@ -65,7 +67,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	// initialize local server with config
+	// initialize server and client with config json
 	localServer, err := proxy.ServerFromURL(conf.Local)
 	if err != nil {
 		log.Printf("can not create local server: %v", err)
@@ -73,4 +75,58 @@ func main() {
 	}
 	defer localServer.Stop()
 
+	remoteClient, err := proxy.ClientFromURL(conf.Remote)
+	if err != nil {
+		log.Printf("can not create remote client: %v", err)
+		os.Exit(-1)
+	}
+
+	directClient, _ := proxy.ClientFromURL("direct://")
+	//matcher := common.NewMather(conf.Route)
+
+	listener, err := net.Listen("tcp", localServer.Addr())
+	if err != nil {
+		log.Printf("can not listen on %v: %v", localServer.Addr(), err)
+		os.Exit(-1)
+	}
+	log.Printf("%v listening TCP on %v", localServer.Name(), localServer.Addr())
+
+	go func() {
+		for {
+			lc, err := listener.Accept()
+			if err != nil {
+				errStr := err.Error()
+				if strings.Contains(errStr, "closed") {
+					break
+				}
+				log.Printf("failed to accepted connection: %v", err)
+				
+				if strings.Contains(errStr, "too many") {
+					time.Sleep(time.Millisecond * 500)
+				}
+				continue
+			}
+
+			go func() {
+				defer lc.Close()
+				var client proxy.Client
+				wlc, targetAddr, err := localServer.Handshake(lc)
+				if err != nil {
+					log.Printf("failed in handshake from %v: %v", localServer.Addr(), err)
+					return
+				}
+				
+				// route matching
+				if conf.Route == whitelist {	// whitelist mode, if matching then connect directly, else use proxy server
+					
+				} else if conf.Route == blacklist { 	// blacklis mode, if matching then use proxy server , else connect directly
+
+				} else {
+					client = remoteClient	// use proxy server globally
+				}
+				log.Printf("%v to %v", client.Name(), targetAddr)
+
+			}
+		}
+	}
 }
