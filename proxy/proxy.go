@@ -9,6 +9,33 @@ import (
 	"strings"
 )
 
+type Client interface {
+	Name() string
+	Addr() string
+	Handshake(underlay net.Conn, target string) (io.ReadWriter, error)
+}
+
+type ClientCreator func(url *url.URL) (Client, error)
+
+var clientMap = make(map[string]ClientCreator)
+
+func RegisterClient(name string, c ClientCreator) {
+	clientMap[name] = c
+}
+
+func ClientFromURL(s string) (Client, error) {
+	u, err := url.Parse(s)
+	if err != nil {
+		log.Printf("can not parse server url %s err: %s", s, err)
+		return nil, err
+	}
+	c, ok := clientMap[strings.ToLower(u.Scheme)]
+	if ok {
+		return c(u)
+	}
+	return nil, errors.New("unknown client scheme '" + u.Scheme + "'")
+}
+
 type Server interface {
 	Name() string
 	Addr() string
