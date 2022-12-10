@@ -125,7 +125,10 @@ func main() {
 					client = remoteClient	// use proxy server globally
 				}
 				log.Printf("%v to %v", client.Name(), targetAddr)
-
+				
+				// connect to remote client
+				dialAddr := remoteClient.Addr()
+				
 			}
 		}
 	}
