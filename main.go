@@ -13,6 +13,7 @@ import (
 
 	"github.com/bryanwux/V3Ray/common"
 	"github.com/bryanwux/V3Ray/proxy"
+	"github.com/bryanwux/V3Ray/proxy/direct"
 )
 
 var (
@@ -128,7 +129,9 @@ func main() {
 				
 				// connect to remote client
 				dialAddr := remoteClient.Addr()
-				
+				if _, ok := client.(*direct.Direct); ok {
+					dialAddr = targetAddr.String()
+				}
 			}
 		}
 	}

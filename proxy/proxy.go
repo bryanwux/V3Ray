@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -70,4 +71,21 @@ type TargetAddr struct {
 	Name string
 	IP   net.IP
 	Port int
+}
+
+// return host:port string
+func (a *TargetAddr) String() string {
+	port := strconv.Itoa(a.Port)
+	if a.IP == nil {
+		return net.JoinHostPort(a.Name, port)
+	}
+	return net.JoinHostPort(a.IP.String(), port)
+}
+
+// return host string
+func (a *TargetAddr) Host() string {
+	if a.IP == nil {
+		return a.Name
+	}
+	return a.IP.String()
 }
