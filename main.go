@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/bryanwux/V3Ray/common"
 	"github.com/bryanwux/V3Ray/proxy"
@@ -101,7 +105,7 @@ func main() {
 					break
 				}
 				log.Printf("failed to accepted connection: %v", err)
-				
+
 				if strings.Contains(errStr, "too many") {
 					time.Sleep(time.Millisecond * 500)
 				}
@@ -116,23 +120,46 @@ func main() {
 					log.Printf("failed in handshake from %v: %v", localServer.Addr(), err)
 					return
 				}
-				
+
 				// route matching
-				if conf.Route == whitelist {	// whitelist mode, if matching then connect directly, else use proxy server
-					
-				} else if conf.Route == blacklist { 	// blacklis mode, if matching then use proxy server , else connect directly
+				if conf.Route == whitelist { // whitelist mode, if matching then connect directly, else use proxy server
+
+				} else if conf.Route == blacklist { // blacklis mode, if matching then use proxy server , else connect directly
 
 				} else {
-					client = remoteClient	// use proxy server globally
+					client = remoteClient // use proxy server globally
 				}
 				log.Printf("%v to %v", client.Name(), targetAddr)
-				
+
 				// connect to remote client
 				dialAddr := remoteClient.Addr()
 				if _, ok := client.(*direct.Direct); ok {
 					dialAddr = targetAddr.String()
 				}
-			}
+				rc, err := net.Dial("tcp", dialAddr)
+				if err != nil {
+					log.Printf("failed to dail to %v: %v", dialAddr, err)
+					return
+				}
+				defer rc.Close()
+
+				wrc, err := client.Handshake(rc, targetAddr.String())
+				if err != nil {
+					log.Printf("failed in handshake to %v: %v", dialAddr, err)
+					return
+				}
+
+				//traffic forwarding
+				go io.Copy(wrc, wlc)
+				io.Copy(wlc, wrc)
+			}()
 		}
+	}()
+
+	// run in background
+	{
+		osSignals := make(chan os.Signal, 1)
+		signal.Notify(osSignals, os.Interrupt, os.Kill, syscall.SIGTERM)
+		<-osSignals
 	}
 }
