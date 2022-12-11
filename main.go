@@ -28,6 +28,12 @@ var (
 	f = flag.String("f", "client.json", "config file name")
 )
 
+const (
+	// router mode
+	whitelist = "whitelist"
+	blacklist = "blacklist"
+)
+
 // Version
 func printVersion() {
 	fmt.Printf("V3Ray %v (%v), %v %v %v\n", version, codename, runtime.Version(), runtime.GOOS, runtime.GOARCH)
